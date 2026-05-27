@@ -1,0 +1,60 @@
+# ========================
+# Environment & Secrets
+# ========================
+.env
+.env.local
+.env.production
+.env.*
+!.env.example
+
+# Auth tokens (NEVER commit)
+.forge/
+auth.json
+
+# ========================
+# Node / TUI
+# ========================
+node_modules/
+tui/dist/
+tui/.opentui/
+*.tsbuildinfo
+.pnpm-store/
+
+# ========================
+# Python / Agent
+# ========================
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+
+# ========================
+# OS
+# ========================
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ========================
+# IDE
+# ========================
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ========================
+# Logs
+# ========================
+*.log
+logs/
