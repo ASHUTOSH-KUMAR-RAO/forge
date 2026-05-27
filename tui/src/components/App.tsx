@@ -4,6 +4,7 @@ import ChatFeed from "./ChatFeed";
 import InputBox from "./InputBox";
 import ToolCallFeed, { type ToolCall } from "./ToolCallFeed";
 import { useChat } from "../hooks/useChat";
+import { parseCommand } from "../commands/parser";
 
 const ToolCallFeedComponent = ToolCallFeed as ComponentType<{
   toolCalls: ToolCall[];
@@ -13,11 +14,33 @@ export default function App() {
   const [input, setInput] = useState("");
   const [sessionId] = useState(() => crypto.randomUUID());
 
-  const { messages, toolCalls, isThinking, connected, sendMessage } = useChat(sessionId);
+  const { messages, toolCalls, isThinking, connected, sendMessage } =
+    useChat(sessionId);
 
   const handleSubmit = (msg: string) => {
     if (!msg.trim()) return;
-    sendMessage(msg);
+
+    const command = parseCommand(msg);
+
+    if (command) {
+      switch (command.type) {
+        case "clear":
+          break;
+        case "help":
+          sendMessage(
+            "Available commands: /clear, /theme, /model, /sessions, /help",
+          );
+          break;
+        case "unknown":
+          sendMessage(`Unknown command: ${command.input}`);
+          break;
+        default:
+          sendMessage(`/${command.type} — coming soon!`);
+      }
+    } else {
+      sendMessage(msg);
+    }
+
     setInput("");
   };
 
@@ -44,14 +67,15 @@ export default function App() {
         <text>
           <span fg="#7C3AED">◆ Forge</span>
           <span fg="#6B7280">
-            {connected ? " v0.1.0 — press ESC to exit" : " v0.1.0 — connecting..."}
+            {connected
+              ? " v0.1.0 — press ESC to exit"
+              : " v0.1.0 — connecting..."}
           </span>
         </text>
       </box>
 
       {/* Tool Call Feed */}
       {toolCalls.length > 0 && (
-        // cast to the ToolCall type exported from ToolCallFeed to satisfy TS when shapes differ
         <ToolCallFeed toolCalls={toolCalls as unknown as ToolCall[]} />
       )}
 
