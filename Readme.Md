@@ -149,7 +149,7 @@ git clone https://github.com/ASHUTOSH-KUMAR-RAO/forge.git
 cd forge
 
 # Install TUI dependencies
-cd tui && pnpm install
+cd tui && bun install
 
 # Install agent dependencies
 cd ../agent && pip install -e ".[dev]"
@@ -159,7 +159,7 @@ cp agent/.env.example agent/.env
 # Fill in your API keys
 
 # Run Forge
-cd tui && pnpm start
+cd tui && bun start
 ```
 
 ---
