@@ -1,13 +1,18 @@
 import { useKeyboard } from "@opentui/react";
-import { useState } from "react";
 
 interface InputBoxProps {
   value: string;
   onChange: (val: string) => void;
   onSubmit: (val: string) => void;
+  accentColor?: string;
 }
 
-export default function InputBox({ value, onChange, onSubmit }: InputBoxProps) {
+export default function InputBox({
+  value,
+  onChange,
+  onSubmit,
+  accentColor = "#7C3AED",
+}: InputBoxProps) {
   useKeyboard((key) => {
     if (key.name === "return") {
       onSubmit(value);
@@ -23,19 +28,43 @@ export default function InputBox({ value, onChange, onSubmit }: InputBoxProps) {
       style={{
         width: "100%",
         height: 3,
-        border: true,
-        borderColor: "#7C3AED",
-        paddingLeft: 2,
-        paddingRight: 2,
+        backgroundColor: "#1C1C1C",
         flexDirection: "row",
-        alignItems: "center",
       }}
     >
-      <text>
-        <span fg="#7C3AED">❯ </span>
-        <span fg="#F9FAFB">{value}</span>
-        <span fg="#7C3AED">█</span>
-      </text>
+      {/* Left border — full height 3 lines */}
+      <box
+        style={{
+          flexDirection: "column",
+          width: 1,
+          height: 3,
+        }}
+      >
+        <text>
+          <span fg={accentColor}>▌</span>
+        </text>
+        <text>
+          <span fg={accentColor}>▌</span>
+        </text>
+        <text>
+          <span fg={accentColor}>▌</span>
+        </text>
+      </box>
+
+      {/* Input — vertically centered */}
+      <box
+        style={{
+          flexGrow: 1,
+          height: 3,
+          flexDirection: "column",
+          justifyContent: "center",
+          paddingLeft: 1,
+        }}
+      >
+        <text>
+          <span fg="#e0e0e0">{value}█</span>
+        </text>
+      </box>
     </box>
   );
 }
