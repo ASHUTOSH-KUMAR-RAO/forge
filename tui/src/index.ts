@@ -24,7 +24,6 @@ cli
     await logout();
   });
 
-// ✅ Init command add kiya
 cli
   .command("init")
   .description("Initialize Forge in your project")
@@ -35,7 +34,10 @@ cli
 
 // Default — launch TUI
 cli.action(async () => {
-  const renderer = await createCliRenderer({ exitOnCtrlC: true });
+  const renderer = await createCliRenderer({
+    exitOnCtrlC: true,
+    useMouse: true,
+  });
   createRoot(renderer).render(createElement(App));
 });
 

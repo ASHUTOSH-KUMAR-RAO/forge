@@ -18,8 +18,13 @@ export default function InputBox({
       onSubmit(value);
     } else if (key.name === "backspace") {
       onChange(value.slice(0, -1));
-    } else if (key.name && key.name.length === 1) {
-      onChange(value + key.name);
+    } else if (key.name === "space") {
+      onChange(value + " ");
+    } else if (!key.ctrl && !key.meta) {
+      const char = typeof key.sequence === "string" ? key.sequence : key.name;
+      if (char && char.length === 1) {
+        onChange(value + char);
+      }
     }
   });
 

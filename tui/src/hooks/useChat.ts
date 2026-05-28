@@ -12,14 +12,19 @@ export function useChat(sessionId: string) {
       switch (event.type) {
         case "message":
           setIsThinking(false);
-          setMessages((prev) => [
-            ...prev,
-            { role: "forge", content: event.payload.content },
-          ]);
+          setMessages((prev) => {
+            const last = prev[prev.length - 1];
+            if (last && last.role === "forge") {
+              return [
+                ...prev.slice(0, -1),
+                { ...last, content: last.content + event.payload.content },
+              ];
+            }
+            return [...prev, { role: "forge", content: event.payload.content }];
+          });
           break;
 
         case "tool_call":
-          // Ab tool calls messages stream mein hi jayenge
           setMessages((prev) => [
             ...prev,
             {
@@ -55,10 +60,12 @@ export function useChat(sessionId: string) {
     send(content);
   };
 
+  const clearMessages = () => setMessages([]);
   return {
     messages,
     isThinking,
     connected,
     sendMessage,
+    clearMessages,
   };
 }
