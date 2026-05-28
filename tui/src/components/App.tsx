@@ -5,7 +5,9 @@ import InputBox from "./InputBox";
 import StatusBar from "./StatusBar";
 import { useChat } from "../hooks/useChat";
 import { useTheme } from "../hooks/useTheme";
+import { useSession } from "../hooks/useSession";
 import { parseCommand } from "../commands/parser";
+import { handleCommand } from "../commands/handler";
 
 export default function App() {
   const [input, setInput] = useState("");
@@ -13,7 +15,8 @@ export default function App() {
   const [sessionName, setSessionName] = useState("New Session");
 
   const { theme, themeName, switchTheme } = useTheme();
-  const { messages, isThinking, connected, sendMessage } = useChat(sessionId);
+  const { newSession } = useSession();
+  const { messages, isThinking, connected, sendMessage, clearMessages } = useChat(sessionId);
 
   const handleSubmit = (msg: string) => {
     if (!msg.trim()) return;
@@ -21,25 +24,14 @@ export default function App() {
     const command = parseCommand(msg);
 
     if (command) {
-      switch (command.type) {
-        case "clear":
-          break;
-        case "help":
-          sendMessage(
-            "Available commands: /clear, /theme, /model, /sessions, /help",
-          );
-          break;
-        case "theme":
-          // parseCommand returns { type: 'theme', name?: string }
-          // use the `name` field for theme switching
-          switchTheme((command as any).name as any);
-          break;
-        case "unknown":
-          sendMessage(`Unknown command: ${command.input}`);
-          break;
-        default:
-          sendMessage(`/${command.type} — coming soon!`);
-      }
+      handleCommand(command, {
+        sendMessage,
+        switchTheme,
+        themeName,
+        newSession,
+        sessionName,
+        clearMessages,
+      });
     } else {
       if (messages.length === 0) setSessionName(msg.slice(0, 40));
       sendMessage(msg);
@@ -54,8 +46,6 @@ export default function App() {
 
   return (
     <box style={{ width: "100%", height: "100%", flexDirection: "column" }}>
-      {/* Header */}
-
       {/* Chat Feed */}
       <box style={{ flexGrow: 1, width: "100%" }}>
         <ChatFeed messages={messages} />
