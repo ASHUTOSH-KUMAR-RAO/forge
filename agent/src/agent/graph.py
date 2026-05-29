@@ -49,6 +49,7 @@ async def run_agent(
         "files_changed": [],
         "error": None,
         "done": False,
+        "emit": emit,
     }
 
     async for event in agent.astream_events(initial_state, version="v2"):
@@ -68,15 +69,28 @@ async def run_agent(
 
         # Tool call finished
         elif kind == "on_tool_end":
+            tool_name = event["name"]
+            file_path = event["data"].get("input", {}).get("path", "")
+
             await emit({
                 "type": "tool_call",
                 "payload": {
-                    "type": event["name"].replace("_", " ").split()[0],
-                    "file": event["data"].get("input", {}).get("path")
+                    "type": tool_name.replace("_", " ").split()[0],
+                    "file": file_path
                         or event["data"].get("input", {}).get("command"),
                     "status": "done",
                 },
             })
+
+            # Actual file content diff emit karo
+            if tool_name in ("write_file", "create_file"):
+                await emit({
+                    "type": "diff",
+                    "payload": {
+                        "filename": file_path,
+                        "content": event["data"].get("input", {}).get("content", ""),
+                    },
+                })
 
         # LLM streaming token
         elif kind == "on_chat_model_stream":

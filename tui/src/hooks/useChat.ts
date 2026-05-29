@@ -2,9 +2,15 @@ import { useState } from "react";
 import { useSocket } from "./useSocket";
 import { type Message } from "../components/ChatFeed";
 
+interface ProgressPayload {
+  label: string;
+  progress: number;
+}
+
 export function useChat(sessionId: string) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isThinking, setIsThinking] = useState(false);
+  const [progress, setProgress] = useState<ProgressPayload | null>(null);
 
   const { connected, send } = useSocket({
     sessionId,
@@ -38,12 +44,32 @@ export function useChat(sessionId: string) {
           ]);
           break;
 
+        case "diff":
+          // Diff ko message stream mein hi add karo
+          setMessages((prev) => [
+            ...prev,
+            {
+              role: "tool" as const,
+              content: event.payload.content,
+              toolType: "write" as const,
+              toolFile: event.payload.filename,
+              toolStatus: "done" as const,
+            },
+          ]);
+          break;
+
+        case "progress":
+          setProgress(event.payload);
+          break;
+
         case "done":
           setIsThinking(false);
+          setProgress(null);
           break;
 
         case "error":
           setIsThinking(false);
+          setProgress(null);
           setMessages((prev) => [
             ...prev,
             { role: "forge", content: `❌ Error: ${event.payload.message}` },
@@ -57,15 +83,21 @@ export function useChat(sessionId: string) {
     if (!content.trim()) return;
     setMessages((prev) => [...prev, { role: "user", content }]);
     setIsThinking(true);
+    setProgress(null);
     send(content);
   };
 
-  const clearMessages = () => setMessages([]);
+  const clearMessages = () => {
+    setMessages([]);
+    setProgress(null);
+  };
+
   return {
     messages,
     isThinking,
     connected,
     sendMessage,
     clearMessages,
+    progress,
   };
 }

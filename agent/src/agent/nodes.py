@@ -2,7 +2,6 @@
 
 import os
 from langchain_groq import ChatGroq
-from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import HumanMessage, SystemMessage
 from agent.state import AgentState
 from tools.file_tools import read_file, write_file, create_file
@@ -44,8 +43,10 @@ async def agent_node(state: AgentState) -> AgentState:
 
 
 async def tools_node(state: AgentState) -> AgentState:
-    """Execute tool calls from agent."""
+    """Execute tool calls from agent — emits real-time events to TUI."""
     from langchain_core.messages import ToolMessage
+
+    emit = state.get("emit")
 
     tool_map = {
         "read_file": read_file,
@@ -63,14 +64,50 @@ async def tools_node(state: AgentState) -> AgentState:
         tool_name = tool_call["name"]
         tool_args = tool_call["args"]
 
+        file_or_cmd = tool_args.get("path") or tool_args.get("command") or ""
+        tool_type = tool_name.replace("_", " ").split()[0]
+
+        # Emit pending event
+        if emit:
+            await emit({
+                "type": "tool_call",
+                "payload": {
+                    "type": tool_type,
+                    "file": file_or_cmd,
+                    "status": "pending",
+                },
+            })
+
         tool_calls_log.append({
-            "type": tool_name.replace("_", " ").split()[0],
-            "file": tool_args.get("path") or tool_args.get("command"),
+            "type": tool_type,
+            "file": file_or_cmd,
             "status": "pending",
         })
 
         try:
             result = await tool_map[tool_name].ainvoke(tool_args)
+
+            # Emit done event
+            if emit:
+                await emit({
+                    "type": "tool_call",
+                    "payload": {
+                        "type": tool_type,
+                        "file": file_or_cmd,
+                        "status": "done",
+                    },
+                })
+
+            # Emit diff event if file was written
+            if tool_name in ("write_file", "create_file") and emit:
+                await emit({
+                    "type": "diff",
+                    "payload": {
+                        "filename": file_or_cmd,
+                        "content": str(result),
+                    },
+                })
+
             tool_results.append(
                 ToolMessage(
                     content=str(result),
@@ -78,7 +115,19 @@ async def tools_node(state: AgentState) -> AgentState:
                 )
             )
             tool_calls_log[-1]["status"] = "done"
+
         except Exception as e:
+            # Emit error event
+            if emit:
+                await emit({
+                    "type": "tool_call",
+                    "payload": {
+                        "type": tool_type,
+                        "file": file_or_cmd,
+                        "status": "error",
+                    },
+                })
+
             tool_results.append(
                 ToolMessage(
                     content=f"Error: {str(e)}",
@@ -91,6 +140,10 @@ async def tools_node(state: AgentState) -> AgentState:
         **state,
         "messages": tool_results,
         "tool_calls": state["tool_calls"] + tool_calls_log,
+        "files_changed": state["files_changed"] + [
+            t["file"] for t in tool_calls_log
+            if t["type"] in ("write", "create") and t["status"] == "done"
+        ],
     }
 
 
