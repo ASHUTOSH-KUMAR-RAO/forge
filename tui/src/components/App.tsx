@@ -3,6 +3,7 @@ import { useState } from "react";
 import ChatFeed from "./ChatFeed";
 import InputBox from "./InputBox";
 import StatusBar from "./StatusBar";
+import ProgressBar from "./ProgressBar";
 import { useChat } from "../hooks/useChat";
 import { useTheme } from "../hooks/useTheme";
 import { useSession } from "../hooks/useSession";
@@ -16,7 +17,14 @@ export default function App() {
 
   const { theme, themeName, switchTheme } = useTheme();
   const { newSession } = useSession();
-  const { messages, isThinking, connected, sendMessage, clearMessages } = useChat(sessionId);
+  const {
+    messages,
+    isThinking,
+    connected,
+    sendMessage,
+    clearMessages,
+    progress,
+  } = useChat(sessionId);
 
   const handleSubmit = (msg: string) => {
     if (!msg.trim()) return;
@@ -26,11 +34,11 @@ export default function App() {
     if (command) {
       handleCommand(command, {
         sendMessage,
+        clearMessages,
         switchTheme,
         themeName,
         newSession,
         sessionName,
-        clearMessages,
       });
     } else {
       if (messages.length === 0) setSessionName(msg.slice(0, 40));
@@ -50,6 +58,15 @@ export default function App() {
       <box style={{ flexGrow: 1, width: "100%" }}>
         <ChatFeed messages={messages} />
       </box>
+
+      {/* Progress Bar */}
+      {progress && (
+        <ProgressBar
+          label={progress.label}
+          progress={progress.progress}
+          color={theme.colors.primary}
+        />
+      )}
 
       {/* Thinking indicator */}
       {isThinking && (
