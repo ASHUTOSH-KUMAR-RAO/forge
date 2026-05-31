@@ -1,5 +1,10 @@
 import { type Command } from "./parser";
 import { type ThemeName } from "../themes";
+import { readFileSync, existsSync } from "fs";
+import { homedir } from "os";
+import { join } from "path";
+
+const AUTH_FILE = join(homedir(), ".forge", "auth.json");
 
 interface HandlerContext {
   sendMessage: (msg: string) => void;
@@ -40,7 +45,18 @@ export function handleCommand(command: Command, ctx: HandlerContext): void {
       break;
 
     case "whoami":
-      ctx.sendMessage("Not signed in — run `forge login`");
+      if (existsSync(AUTH_FILE)) {
+        const auth = JSON.parse(readFileSync(AUTH_FILE, "utf-8"));
+        if (auth.loggedIn) {
+          ctx.sendMessage(
+            `✅ Logged in — session active since ${new Date(auth.timestamp).toLocaleString()}`,
+          );
+        } else {
+          ctx.sendMessage("❌ Not logged in — run `forge login` in terminal");
+        }
+      } else {
+        ctx.sendMessage("❌ Not logged in — run `forge login` in terminal");
+      }
       break;
 
     case "new":
@@ -48,6 +64,22 @@ export function handleCommand(command: Command, ctx: HandlerContext): void {
       ctx.clearMessages();
       ctx.sendMessage(
         `✓ New session started${command.name ? `: ${command.name}` : ""}`,
+      );
+      break;
+
+    case "shortcuts":
+      ctx.sendMessage(
+        "Shortcuts: ESC — exit  |  ↑↓ — scroll  |  ← → — cursor move  |  Enter — send  |  Ctrl+V — paste",
+      );
+      break;
+
+    case "version":
+      ctx.sendMessage("Forge v0.1.0");
+      break;
+
+    case "changelog":
+      ctx.sendMessage(
+        "v0.1.0 — Initial release: TUI, agent backend, streaming, diff view, tool calls",
       );
       break;
 
