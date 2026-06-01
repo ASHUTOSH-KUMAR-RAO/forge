@@ -43,6 +43,9 @@ export type Command =
   | { type: "feedback" }
   | { type: "changelog" }
   | { type: "whoami" }
+  | { type: "login" }
+  | { type: "signup" }
+  | { type: "logout" }
   | { type: "upgrade" }
   | { type: "billing" }
   | { type: "plan" }
@@ -56,6 +59,12 @@ export function parseCommand(input: string): Command | null {
   const [cmd, ...args] = input.slice(1).trim().split(/\s+/);
 
   switch (cmd) {
+    case "login":
+      return { type: "login" };
+    case "signup":
+      return { type: "signup" };
+    case "logout":
+      return { type: "logout" };
     case "new":
       return { type: "new", name: args[0] };
     case "sessions":
