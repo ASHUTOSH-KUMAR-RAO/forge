@@ -1,6 +1,6 @@
 import { type Command } from "./parser";
 import { type ThemeName } from "../themes";
-import { readFileSync, existsSync } from "fs";
+import { readFileSync, existsSync, unlinkSync } from "fs";
 import { homedir } from "os";
 import { join } from "path";
 
@@ -17,6 +17,33 @@ interface HandlerContext {
 
 export function handleCommand(command: Command, ctx: HandlerContext): void {
   switch (command.type) {
+    case "login":
+      ctx.sendMessage("🔐 Opening browser for authentication...");
+      import("./login").then(({ login }) => {
+        login()
+          .then(() => ctx.sendMessage("✅ Signed in successfully!"))
+          .catch(() => ctx.sendMessage("❌ Login failed or timed out"));
+      });
+      break;
+
+    case "signup":
+      ctx.sendMessage("🔐 Opening browser to create account...");
+      import("./login").then(({ login }) => {
+        login()
+          .then(() => ctx.sendMessage("✅ Account created successfully!"))
+          .catch(() => ctx.sendMessage("❌ Signup failed or timed out"));
+      });
+      break;
+
+    case "logout":
+      if (existsSync(AUTH_FILE)) {
+        unlinkSync(AUTH_FILE);
+        ctx.sendMessage("✅ Signed out successfully!");
+      } else {
+        ctx.sendMessage("❌ Not signed in");
+      }
+      break;
+
     case "clear":
       ctx.clearMessages();
       break;
@@ -36,7 +63,7 @@ export function handleCommand(command: Command, ctx: HandlerContext): void {
 
     case "help":
       ctx.sendMessage(
-        "Commands: /clear /theme /themes /model /models /sessions /new /history /export /index /search /docs /diff /tree /changes /restore /plan /stop /retry /undo /context /tokens /upgrade /billing /plan /usage /limits /whoami /version /shortcuts /config /reset /feedback /changelog",
+        "Commands: /login /signup /logout /clear /theme /themes /model /models /sessions /new /history /export /index /search /docs /diff /tree /changes /restore /plan /stop /retry /undo /context /tokens /upgrade /billing /usage /limits /whoami /version /shortcuts /config /reset /feedback /changelog",
       );
       break;
 
@@ -52,10 +79,10 @@ export function handleCommand(command: Command, ctx: HandlerContext): void {
             `✅ Logged in — session active since ${new Date(auth.timestamp).toLocaleString()}`,
           );
         } else {
-          ctx.sendMessage("❌ Not logged in — run `forge login` in terminal");
+          ctx.sendMessage("❌ Not logged in — type /login");
         }
       } else {
-        ctx.sendMessage("❌ Not logged in — run `forge login` in terminal");
+        ctx.sendMessage("❌ Not logged in — type /login");
       }
       break;
 
@@ -73,13 +100,9 @@ export function handleCommand(command: Command, ctx: HandlerContext): void {
       );
       break;
 
-    case "version":
-      ctx.sendMessage("Forge v0.1.0");
-      break;
-
     case "changelog":
       ctx.sendMessage(
-        "v0.1.0 — Initial release: TUI, agent backend, streaming, diff view, tool calls",
+        "v0.1.0 — Initial release: TUI, agent backend, streaming, diff view, tool calls, auth",
       );
       break;
 

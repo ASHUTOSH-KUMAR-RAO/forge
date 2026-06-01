@@ -4,9 +4,11 @@ import ChatFeed from "./ChatFeed";
 import InputBox from "./InputBox";
 import StatusBar from "./StatusBar";
 import ProgressBar from "./ProgressBar";
+import AuthGate from "./AuthGate";
 import { useChat } from "../hooks/useChat";
 import { useTheme } from "../hooks/useTheme";
 import { useSession } from "../hooks/useSession";
+import { useAuth } from "../hooks/useAuth";
 import { parseCommand } from "../commands/parser";
 import { handleCommand } from "../commands/handler";
 
@@ -17,6 +19,7 @@ export default function App() {
 
   const { theme, themeName, switchTheme } = useTheme();
   const { newSession } = useSession();
+  const { auth } = useAuth();
   const {
     messages,
     isThinking,
@@ -51,6 +54,19 @@ export default function App() {
   useKeyboard((key) => {
     if (key.name === "escape") process.exit(0);
   });
+
+  // Auth gate — agar logged in nahi toh restricted view
+  if (!auth.loggedIn) {
+    return (
+      <AuthGate
+        value={input}
+        onChange={setInput}
+        onCommand={handleSubmit}
+        accentColor={theme.colors.primary}
+        themeName={themeName}
+      />
+    );
+  }
 
   return (
     <box style={{ width: "100%", height: "100%", flexDirection: "column" }}>
