@@ -1,11 +1,13 @@
 import { type Command } from "./parser";
 import { type ThemeName } from "../themes";
-import { readFileSync, existsSync, unlinkSync } from "fs";
+import { readFileSync, existsSync, unlinkSync, readdirSync, statSync } from "fs";
 import { homedir } from "os";
 import { join } from "path";
-
+import { resolve } from "path";
 const AUTH_FILE = join(homedir(), ".forge", "auth.json");
 
+const WORKING_DIR = resolve(process.cwd());
+const AGENT_DIR = resolve(process.cwd(), "..", "agent");
 interface HandlerContext {
   sendMessage: (msg: string) => void;
   clearMessages: () => void;
@@ -63,7 +65,7 @@ export function handleCommand(command: Command, ctx: HandlerContext): void {
 
     case "help":
       ctx.sendMessage(
-        "Commands: /login /signup /logout /clear /theme /themes /model /models /sessions /new /history /export /index /search /docs /diff /tree /changes /restore /plan /stop /retry /undo /context /tokens /upgrade /billing /usage /limits /whoami /version /shortcuts /config /reset /feedback /changelog",
+        "Commands: /login /signup /logout /clear /theme /themes /model /models /sessions /new /history /export /index /search /docs /diff /tree /changes /restore /delete /plan /stop /retry /undo /context /tokens /upgrade /billing /usage /limits /whoami /version /shortcuts /config /reset /feedback /changelog",
       );
       break;
 
@@ -83,6 +85,92 @@ export function handleCommand(command: Command, ctx: HandlerContext): void {
         }
       } else {
         ctx.sendMessage("❌ Not logged in — type /login");
+      }
+      break;
+
+    case "delete":
+      if (!command.id) {
+        ctx.sendMessage("❌ Usage: /delete <filename>");
+        break;
+      }
+      try {
+        const paths = [
+          resolve(command.id),
+          join(WORKING_DIR, command.id),
+          join(AGENT_DIR, command.id),
+          resolve(process.cwd(), "..", command.id), 
+        ];
+
+        // Debug — dekho kaunse paths check ho rahe hain
+        ctx.sendMessage(`🔍 Checking paths:\n${paths.join("\n")}`);
+
+        const found = paths.find((p) => existsSync(p));
+
+        if (!found) {
+          ctx.sendMessage(`❌ File not found: ${command.id}`);
+          break;
+        }
+
+        unlinkSync(found);
+        ctx.sendMessage(`✅ Deleted: ${command.id}`);
+      } catch (e) {
+        ctx.sendMessage(`❌ Error: ${e}`);
+      }
+      break;
+    case "open":
+      if (!command.file) {
+        ctx.sendMessage("❌ Usage: /open <filename>");
+        break;
+      }
+      try {
+        const openPaths = [
+          command.file,
+          join(process.cwd(), command.file),
+          join(AGENT_DIR, command.file),
+        ];
+        const foundFile = openPaths.find((p) => existsSync(p));
+        if (!foundFile) {
+          ctx.sendMessage(`❌ File not found: ${command.file}`);
+          break;
+        }
+        const content = readFileSync(foundFile, "utf-8");
+        ctx.sendMessage(`📄 ${command.file}:\n\n${content}`);
+      } catch (e) {
+        ctx.sendMessage(`❌ Could not read: ${command.file}`);
+      }
+      break;
+
+    case "tree":
+      try {
+        const buildTree = (dir: string, prefix = "", depth = 0): string => {
+          if (depth > 3) return "";
+          const items = readdirSync(dir).filter(
+            (f) =>
+              !["node_modules", ".git", "__pycache__", ".venv"].includes(f),
+          );
+          return items
+            .map((item, i) => {
+              const isLast = i === items.length - 1;
+              const connector = isLast ? "└── " : "├── ";
+              const childPrefix = isLast ? "    " : "│   ";
+              const fullPath = join(dir, item);
+              const isDir = statSync(fullPath).isDirectory();
+              const line = `${prefix}${connector}${item}${isDir ? "/" : ""}`;
+              if (isDir) {
+                return (
+                  line +
+                  "\n" +
+                  buildTree(fullPath, prefix + childPrefix, depth + 1)
+                );
+              }
+              return line;
+            })
+            .join("\n");
+        };
+        const tree = buildTree(AGENT_DIR);
+        ctx.sendMessage(`📁 Project tree:\n\n${tree}`);
+      } catch (e) {
+        ctx.sendMessage("❌ Could not read project tree");
       }
       break;
 
