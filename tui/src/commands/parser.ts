@@ -51,7 +51,7 @@ export type Command =
   | { type: "plan" }
   | { type: "usage" }
   | { type: "limits" }
-  | { type: "unknown"; input: string };
+  | { type: "unknown"; input: string } | { type: "cd"; path: string };
 
 export function parseCommand(input: string): Command | null {
   if (!input.startsWith("/")) return null;
@@ -103,6 +103,8 @@ export function parseCommand(input: string): Command | null {
       return { type: "tree" };
     case "changes":
       return { type: "changes" };
+    case "cd":
+      return { type: "cd", path: args[0] };
     case "restore":
       return {
         type: "restore",

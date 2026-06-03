@@ -1,6 +1,12 @@
 import { type Command } from "./parser";
 import { type ThemeName } from "../themes";
-import { readFileSync, existsSync, unlinkSync, readdirSync, statSync } from "fs";
+import {
+  readFileSync,
+  existsSync,
+  unlinkSync,
+  readdirSync,
+  statSync,
+} from "fs";
 import { homedir } from "os";
 import { join } from "path";
 import { resolve } from "path";
@@ -15,6 +21,8 @@ interface HandlerContext {
   themeName: string;
   newSession: (name?: string) => void;
   sessionName: string;
+  workingDir: string;
+  setWorkingDir: (path: string) => void;
 }
 
 export function handleCommand(command: Command, ctx: HandlerContext): void {
@@ -45,7 +53,30 @@ export function handleCommand(command: Command, ctx: HandlerContext): void {
         ctx.sendMessage("❌ Not signed in");
       }
       break;
+    case "cd":
+      if (!command.path) {
+        ctx.sendMessage(`📁 Current directory: ${ctx.workingDir}`);
+        break;
+      }
+      try {
+        const newPath = resolve(ctx.workingDir, command.path);
 
+        if (!existsSync(newPath)) {
+          ctx.sendMessage(`❌ Directory not found: ${command.path}`);
+          break;
+        }
+
+        if (!statSync(newPath).isDirectory()) {
+          ctx.sendMessage(`❌ Not a directory: ${command.path}`);
+          break;
+        }
+
+        ctx.setWorkingDir(newPath);
+        ctx.sendMessage(`✅ Changed to: ${newPath}`);
+      } catch (e) {
+        ctx.sendMessage(`❌ Could not change directory`);
+      }
+      break;
     case "clear":
       ctx.clearMessages();
       break;
@@ -98,7 +129,7 @@ export function handleCommand(command: Command, ctx: HandlerContext): void {
           resolve(command.id),
           join(WORKING_DIR, command.id),
           join(AGENT_DIR, command.id),
-          resolve(process.cwd(), "..", command.id), 
+          resolve(process.cwd(), "..", command.id),
         ];
 
         // Debug — dekho kaunse paths check ho rahe hain

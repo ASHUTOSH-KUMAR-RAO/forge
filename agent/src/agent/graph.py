@@ -1,6 +1,7 @@
 """LangGraph agent graph definition."""
 
 import json
+import os
 from typing import AsyncGenerator
 from langgraph.graph import StateGraph, END
 from agent.state import AgentState
@@ -37,9 +38,14 @@ async def run_agent(
     task: str,
     session_id: str,
     emit,
+    working_dir: str = None,
 ) -> AsyncGenerator[dict, None]:
     """Run agent and stream events to TUI via WebSocket."""
     from langchain_core.messages import HumanMessage
+
+    # Working directory set karo
+    if working_dir:
+        os.chdir(working_dir)
 
     initial_state: AgentState = {
         "session_id": session_id,
@@ -82,7 +88,7 @@ async def run_agent(
                 },
             })
 
-            # Actual file content diff emit karo
+            # Diff emit karo agar file write hui
             if tool_name in ("write_file", "create_file"):
                 await emit({
                     "type": "diff",
