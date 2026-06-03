@@ -7,13 +7,14 @@ interface ProgressPayload {
   progress: number;
 }
 
-export function useChat(sessionId: string) {
+export function useChat(sessionId: string, workingDir?: string) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isThinking, setIsThinking] = useState(false);
   const [progress, setProgress] = useState<ProgressPayload | null>(null);
 
-  const { connected, send } = useSocket({
+  const { connected, send, setWorkingDir } = useSocket({
     sessionId,
+    workingDir,
     onMessage: (event) => {
       switch (event.type) {
         case "message":
@@ -45,7 +46,6 @@ export function useChat(sessionId: string) {
           break;
 
         case "diff":
-          // Diff ko message stream mein hi add karo
           setMessages((prev) => [
             ...prev,
             {
@@ -99,5 +99,6 @@ export function useChat(sessionId: string) {
     sendMessage,
     clearMessages,
     progress,
+    setWorkingDir,
   };
 }

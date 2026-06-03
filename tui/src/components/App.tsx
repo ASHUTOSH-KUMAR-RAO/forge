@@ -16,6 +16,7 @@ export default function App() {
   const [input, setInput] = useState("");
   const [sessionId] = useState(() => crypto.randomUUID());
   const [sessionName, setSessionName] = useState("New Session");
+  const [workingDir, setWorkingDir] = useState<string>(process.cwd());
 
   const { theme, themeName, switchTheme } = useTheme();
   const { newSession } = useSession();
@@ -27,7 +28,8 @@ export default function App() {
     sendMessage,
     clearMessages,
     progress,
-  } = useChat(sessionId);
+    setWorkingDir: setSocketWorkingDir,
+  } = useChat(sessionId, workingDir);
 
   const handleSubmit = (msg: string) => {
     if (!msg.trim()) return;
@@ -42,6 +44,11 @@ export default function App() {
         themeName,
         newSession,
         sessionName,
+        workingDir,
+        setWorkingDir: (path: string) => {
+          setWorkingDir(path);
+          setSocketWorkingDir(path);
+        },
       });
     } else {
       if (messages.length === 0) setSessionName(msg.slice(0, 40));
@@ -55,7 +62,7 @@ export default function App() {
     if (key.name === "escape") process.exit(0);
   });
 
-  // Auth gate — agar logged in nahi toh restricted view
+  // Auth gate
   if (!auth.loggedIn) {
     return (
       <AuthGate
