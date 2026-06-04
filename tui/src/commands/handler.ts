@@ -170,7 +170,55 @@ export function handleCommand(command: Command, ctx: HandlerContext): void {
         ctx.sendMessage(`❌ Could not read: ${command.file}`);
       }
       break;
+    case "index":
+      ctx.sendMessage("🔍 Indexing codebase — please wait...");
+      fetch("http://127.0.0.1:8000/api/index", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          working_dir: ctx.workingDir,
+          session_id: "default",
+        }),
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          ctx.sendMessage(`✅ ${data.message}`);
+        })
+        .catch(() => {
+          ctx.sendMessage("❌ Indexing failed — is backend running?");
+        });
+      break;
 
+    case "search":
+      if (!command.query) {
+        ctx.sendMessage("❌ Usage: /search <query>");
+        break;
+      }
+      ctx.sendMessage(`🔍 Searching: ${command.query}`);
+      fetch("http://127.0.0.1:8000/api/search", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          query: command.query,
+          session_id: "default",
+          k: 5,
+        }),
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          if (!data.results?.length) {
+            ctx.sendMessage("No results found — try /index first");
+            return;
+          }
+          const results = data.results
+            .map((r: any) => `📄 ${r.file}\n${r.content?.slice(0, 200)}...`)
+            .join("\n\n");
+          ctx.sendMessage(results);
+        })
+        .catch(() => {
+          ctx.sendMessage("❌ Search failed");
+        });
+      break;
     case "tree":
       try {
         const buildTree = (dir: string, prefix = "", depth = 0): string => {

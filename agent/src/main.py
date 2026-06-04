@@ -4,6 +4,8 @@ import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
+load_dotenv(".env.local")  # ← .env.local explicitly load karo
+load_dotenv(".env")
 
 load_dotenv()
 
