@@ -4,7 +4,7 @@ import os
 from langchain_groq import ChatGroq
 from langchain_core.messages import HumanMessage, SystemMessage
 from agent.state import AgentState
-from tools.file_tools import read_file, write_file, create_file
+from tools.file_tools import read_file, write_file, create_file, delete_file
 from tools.shell_tools import run_command
 from tools.web_search import web_search
 
@@ -16,20 +16,29 @@ llm = ChatGroq(
 )
 
 # Tools
-tools = [read_file, write_file, create_file, run_command, web_search]
+tools = [read_file, write_file, create_file, delete_file, run_command, web_search]
 llm_with_tools = llm.bind_tools(tools)
 
 SYSTEM_PROMPT = """You are Forge, a terminal-based AI coding agent.
 You help developers write, edit, and run code directly from the terminal.
 You have access to file operations, shell commands, and web search.
 Always be concise, accurate, and developer-friendly.
-When making file changes, always show what you changed and why."""
+When making file changes, always show what you changed and why.
+When you have codebase context, use it to give more accurate answers."""
 
 
 async def agent_node(state: AgentState) -> AgentState:
     """Main agent node — calls LLM with tools."""
+
+    # RAG context inject karo agar available hai
+    rag_context = state.get("rag_context", "")
+
+    system_content = SYSTEM_PROMPT
+    if rag_context:
+        system_content += f"\n\n## Relevant codebase context:\n{rag_context}"
+
     messages = [
-        SystemMessage(content=SYSTEM_PROMPT),
+        SystemMessage(content=system_content),
         *state["messages"],
     ]
 
@@ -43,7 +52,7 @@ async def agent_node(state: AgentState) -> AgentState:
 
 
 async def tools_node(state: AgentState) -> AgentState:
-    """Execute tool calls from agent — emits real-time events to TUI."""
+    """Execute tool calls from agent."""
     from langchain_core.messages import ToolMessage
 
     emit = state.get("emit")
@@ -52,6 +61,7 @@ async def tools_node(state: AgentState) -> AgentState:
         "read_file": read_file,
         "write_file": write_file,
         "create_file": create_file,
+        "delete_file": delete_file,
         "run_command": run_command,
         "web_search": web_search,
     }
@@ -98,13 +108,13 @@ async def tools_node(state: AgentState) -> AgentState:
                     },
                 })
 
-            # Emit diff event if file was written
+            # Diff emit karo agar file write hui
             if tool_name in ("write_file", "create_file") and emit:
                 await emit({
                     "type": "diff",
                     "payload": {
                         "filename": file_or_cmd,
-                        "content": str(result),
+                        "content": tool_args.get("content", ""),
                     },
                 })
 
@@ -117,7 +127,6 @@ async def tools_node(state: AgentState) -> AgentState:
             tool_calls_log[-1]["status"] = "done"
 
         except Exception as e:
-            # Emit error event
             if emit:
                 await emit({
                     "type": "tool_call",
